@@ -97,7 +97,8 @@ def get_planet_positions(query_datetime, city, country):
 # Streamlit UI
 st.title("🪐 Jyotish D1 Chart Generator")
 
-now = datetime.now()
+ist = pytz.timezone("Asia/Kolkata")
+now = datetime.now(ist)
 default_date = now.date()
 default_time = now.strftime("%H:%M:%S")
 
