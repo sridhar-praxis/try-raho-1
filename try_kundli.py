@@ -5,44 +5,50 @@ import pandas as pd
 from datetime import datetime
 import pytz
 from geopy.geocoders import Nominatim
-import requests
 
-# Cache the geocoding function
+# Hardcoded fallback lat/lon for key cities
+fallback_locations = {
+    "Bangalore, India": (12.9716, 77.5946),
+    "Chennai, India": (13.0827, 80.2707),
+    "Delhi, India": (28.6139, 77.2090),
+    "Mumbai, India": (19.0760, 72.8777),
+    "Kolkata, India": (22.5726, 88.3639),
+}
+
 @st.cache_data(show_spinner=False)
-def get_location(city, country):
-    geolocator = Nominatim(user_agent="kundli-streamlit")
-    location = geolocator.geocode(f"{city}, {country}")
-    if not location:
-        # Fallback to Geoapify if Nominatim fails
-        geoapify_api_key = "YOUR_GEOAPIFY_API_KEY"  # Get it from https://www.geoapify.com/
-        geoapify_url = f"https://api.geoapify.com/v1/geocode/search?text={city},{country}&apiKey={geoapify_api_key}"
-        response = requests.get(geoapify_url).json()
-        if response.get('features'):
-            location = response['features'][0]['geometry']['coordinates']
+def get_coordinates(city, country):
+    key = f"{city.strip()}, {country.strip()}"
+    try:
+        geolocator = Nominatim(user_agent="kundli-streamlit")
+        loc = geolocator.geocode(key, timeout=10)
+        if loc:
+            return loc.latitude, loc.longitude
+        elif key in fallback_locations:
+            st.warning(f"Using fallback coordinates for {key}")
+            return fallback_locations[key]
         else:
-            return None
-    return location
+            return None, None
+    except Exception as e:
+        if key in fallback_locations:
+            st.warning(f"Geocoding failed: {e}. Using fallback for {key}")
+            return fallback_locations[key]
+        else:
+            st.error(f"Geolocation failed and no fallback is available: {e}")
+            return None, None
 
 def get_planet_positions(query_datetime, city, country):
-    # Convert local to UTC
     local = pytz.timezone('Asia/Kolkata')
     local_dt = local.localize(query_datetime)
     utc_dt = local_dt.astimezone(pytz.utc)
 
     yr, mnth, dte = utc_dt.year, utc_dt.month, utc_dt.day
     hr, minut, secnd = utc_dt.hour, utc_dt.minute, utc_dt.second
-
     jd = swe.utc_to_jd(yr, mnth, dte, hr, minut, secnd)
 
-    # Get lat-long
-    loc = get_location(city, country)
-    if not loc:
-        st.error(f"Could not find location for {city}, {country}")
+    lat, lon = get_coordinates(city, country)
+    if not lat:
         return pd.DataFrame()
 
-    lat, lon = loc[1], loc[0]  # Geoapify returns coordinates as [longitude, latitude]
-
-    # Sidereal and ayanamsa
     swe.set_sid_mode(swe.SIDM_LAHIRI)
     delta = 0.88
     ayan = swe.get_ayanamsa_ut(jd[1])
@@ -78,7 +84,6 @@ def get_planet_positions(query_datetime, city, country):
             M_ketu = int((ketu_pos % 1) * 60)
             graha_pos.append(ketu_pos)
             formatted_graha_pos.append(f'{Q_ketu}s {D_ketu}d {M_ketu}m')
-
             graham = 'Rahu'
 
         graha.append(graham)
@@ -91,11 +96,9 @@ def get_planet_positions(query_datetime, city, country):
         "FormattedLong": formatted_graha_pos
     })
 
-
 # Streamlit UI
 st.title("🪐 Jyotish D1 Chart Generator")
 
-# Default values
 now = datetime.now()
 default_date = now.date()
 default_time = now.strftime("%H:%M:%S")
@@ -103,15 +106,4 @@ default_time = now.strftime("%H:%M:%S")
 st.subheader("📅 Enter Birth Details")
 birth_date = st.date_input("Date of Birth", value=default_date)
 birth_time = st.text_input("Time of Birth (HH:MM:SS)", value=default_time)
-city = st.text_input("City of Birth", value="Bangalore")
-country = st.text_input("Country of Birth", value="India")
-
-if st.button("Generate Kundli"):
-    try:
-        dt = datetime.strptime(f"{birth_date} {birth_time}", "%Y-%m-%d %H:%M:%S")
-        df_chart = get_planet_positions(dt, city, country)
-        if not df_chart.empty:
-            st.success("Kundli generated successfully!")
-            st.dataframe(df_chart)
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
+city = st
