@@ -5,6 +5,23 @@ import pandas as pd
 from datetime import datetime
 import pytz
 from geopy.geocoders import Nominatim
+import requests
+
+# Cache the geocoding function
+@st.cache_data(show_spinner=False)
+def get_location(city, country):
+    geolocator = Nominatim(user_agent="kundli-streamlit")
+    location = geolocator.geocode(f"{city}, {country}")
+    if not location:
+        # Fallback to Geoapify if Nominatim fails
+        geoapify_api_key = "YOUR_GEOAPIFY_API_KEY"  # Get it from https://www.geoapify.com/
+        geoapify_url = f"https://api.geoapify.com/v1/geocode/search?text={city},{country}&apiKey={geoapify_api_key}"
+        response = requests.get(geoapify_url).json()
+        if response.get('features'):
+            location = response['features'][0]['geometry']['coordinates']
+        else:
+            return None
+    return location
 
 def get_planet_positions(query_datetime, city, country):
     # Convert local to UTC
@@ -18,17 +35,18 @@ def get_planet_positions(query_datetime, city, country):
     jd = swe.utc_to_jd(yr, mnth, dte, hr, minut, secnd)
 
     # Get lat-long
-    geolocator = Nominatim(user_agent="kundli-streamlit")
-    loc = geolocator.geocode(f"{city}, {country}")
+    loc = get_location(city, country)
     if not loc:
         st.error(f"Could not find location for {city}, {country}")
         return pd.DataFrame()
+
+    lat, lon = loc[1], loc[0]  # Geoapify returns coordinates as [longitude, latitude]
 
     # Sidereal and ayanamsa
     swe.set_sid_mode(swe.SIDM_LAHIRI)
     delta = 0.88
     ayan = swe.get_ayanamsa_ut(jd[1])
-    hous = swe.houses(jd[1], loc.latitude, loc.longitude, b'P')
+    hous = swe.houses(jd[1], lat, lon, b'P')
     apos = hous[0][0] - ayan + delta
     if apos < 0:
         apos += 360
