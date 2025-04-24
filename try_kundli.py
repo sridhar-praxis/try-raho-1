@@ -100,11 +100,14 @@ st.title("🪐 Jyotish D1 Chart Generator")
 ist = pytz.timezone("Asia/Kolkata")
 now = datetime.now(ist)
 default_date = now.date()
-default_time = now.strftime("%H:%M:%S")
+if "birth_time" not in st.session_state:
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist)
+    st.session_state.birth_time = now.strftime("%H:%M:%S")
 
 st.subheader("📅 Enter Birth Details")
 birth_date = st.date_input("Date of Birth", value=default_date)
-birth_time = st.text_input("Time of Birth (HH:MM:SS)", value=default_time)
+birth_time = st.text_input("Time of Birth (HH:MM:SS)", value=st.session_state.birth_time)
 
 st.subheader("📍 Enter Birth Location")
 city = st.text_input("City of Birth", value="Bangalore")
