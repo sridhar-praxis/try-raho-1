@@ -37,7 +37,6 @@ def get_coordinates(city, country):
             return None, None
 
 def get_planet_positions(query_datetime, city, country):
-    local = pytz.timezone('Asia/Kolkata')
     utc_dt = query_datetime.astimezone(pytz.utc)
 
     yr, mnth, dte = utc_dt.year, utc_dt.month, utc_dt.day
@@ -105,7 +104,8 @@ default_time = now.strftime("%H:%M:%S")
 st.subheader("📅 Enter Birth Details")
 birth_date = st.date_input("Date of Birth", value=default_date)
 birth_time = st.text_input("Time of Birth (HH:MM:SS)", value=default_time)
-city = st.subheader("📍 Enter Birth Location")
+
+st.subheader("📍 Enter Birth Location")
 city = st.text_input("City of Birth", value="Bangalore")
 country = st.text_input("Country of Birth", value="India")
 
@@ -120,4 +120,3 @@ if st.button("Generate Kundli"):
             st.dataframe(df_chart)
     except Exception as e:
         st.error(f"An error occurred: {e}")
-
