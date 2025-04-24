@@ -106,4 +106,17 @@ default_time = now.strftime("%H:%M:%S")
 st.subheader("📅 Enter Birth Details")
 birth_date = st.date_input("Date of Birth", value=default_date)
 birth_time = st.text_input("Time of Birth (HH:MM:SS)", value=default_time)
-city = st
+city = st.subheader("📍 Enter Birth Location")
+city = st.text_input("City of Birth", value="Bangalore")
+country = st.text_input("Country of Birth", value="India")
+
+if st.button("Generate Kundli"):
+    try:
+        dt = datetime.strptime(f"{birth_date} {birth_time}", "%Y-%m-%d %H:%M:%S")
+        df_chart = get_planet_positions(dt, city, country)
+        if not df_chart.empty:
+            st.success("Kundli generated successfully!")
+            st.dataframe(df_chart)
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+
