@@ -48,10 +48,10 @@ def get_planet_positions(query_datetime, city, country):
         return pd.DataFrame()
 
     swe.set_sid_mode(swe.SIDM_LAHIRI)
-    delta = 0.88
+    delta = 1.00
     ayan = swe.get_ayanamsa_ut(jd[1])
     hous = swe.houses(jd[1], lat, lon, b'P')
-    apos = hous[0][0] - ayan + delta
+    apos = hous[0][0] - ayan - delta
     if apos < 0:
         apos += 360
 
